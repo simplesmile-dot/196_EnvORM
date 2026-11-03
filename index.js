@@ -6,60 +6,71 @@ const db = require('./models');
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-db.sequelize.sync()
-    .then((result) => {
-        app.listen(3000, () => {console.log('Server Started')});
-    })
-    .catch((err) => {console.log(err)});
-
+// 1. CREATE (POST)
 app.post("/komik", async (req, res) => {
     const data = req.body;
     try {
-        const komik = await db.Komik.create(data);
-        res.send(komik);
+        const komik = await db.komik.create(data);
+        res.status(201).json({
+            message: "Komik berhasil ditambahkan",
+            data: komik
+        });
     } catch (err) {
-        res.send(err);
+        res.status(500).json({ error: err.message });
     }
 });
 
+// 2. READ ALL (GET)
 app.get("/komik", async (req, res) => {
     try {
-        const komik = await db.Komik.findAll();
-        res.send(komik);
+        const komiks = await db.komik.findAll();
+        res.status(200).json(komiks);
     } catch (err) {
-        res.send(err);
+        res.status(500).json({ error: err.message });
     } 
 });
 
+// 3. UPDATE (PUT)
 app.put("/komik/:id", async (req, res) => {
     const id = req.params.id;
     const data = req.body;
     try {
-        const komik = await db.Komik.findByPk(id);
+        const komik = await db.komik.findByPk(id);
         if (!komik) {
-            return res.status(404).send({message: 'Komik tidak ditemukan' });
+            return res.status(404).json({ message: 'Komik tidak ditemukan' });
         }
         await komik.update(data);
-        res.send({message: 'Komik berhasil diupdate', komik});
+        res.status(200).json({
+            message: 'Komik berhasil diupdate',
+            data: komik
+        });
     } catch (err) {
-        res.status(500).send(err);
+        res.status(500).json({ error: err.message });
     }
 });
 
+// 4. DELETE (DELETE)
 app.delete("/komik/:id", async (req, res) => {
     const id = req.params.id;
     try {
-        const komik = await db.Komik.findByPk(id);
+        const komik = await db.komik.findByPk(id);
         if (!komik) {
-            return res.status(404).send({message: 'Komik tidak ditemukan' });
+            return res.status(404).json({ message: 'Komik tidak ditemukan' });
         }
         await komik.destroy();
-        res.send({message: 'Komik berhasil dihapus'});
+        res.status(200).json({ message: 'Komik berhasil dihapus' });
     } catch (err) {
-        res.status(500).send(err);
+        res.status(500).json({ error: err.message });
     }   
-})
-
-app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
 });
+
+// Sinkronisasi Database dan Menyalakan Server
+db.sequelize.sync()
+    .then(() => {
+        app.listen(port, () => {
+            console.log(`Server is running on port ${port}`);
+        });
+    })
+    .catch((err) => {
+        console.log("Gagal koneksi database: ", err);
+    });
